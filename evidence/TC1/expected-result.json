@@ -1,0 +1,4 @@
+{
+  "expected_change_type": "price_change",
+  "notes": "Competitor A increased price from \u20b9999 to \u20b91,099 (+10.01%). Correctly flagged as genuine price increase alert."
+}

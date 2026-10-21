@@ -1,0 +1,4 @@
+{
+  "expected_change_type": "unavailable",
+  "notes": "Competitor C changed pricing to 'Contact sales'. Rule enforced: Contact sales is marked unavailable and price is null, never zero."
+}

@@ -1,0 +1,4 @@
+{
+  "expected_change_type": "currency_change",
+  "notes": "Competitor B switched display currency from USD to INR. Rule enforced: never compare amounts across different currencies as a price change. False alert suppressed."
+}

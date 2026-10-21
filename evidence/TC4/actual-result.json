@@ -1,0 +1,9 @@
+{
+  "alert_id": 20,
+  "change_type": "price_change",
+  "percentage_change": 10.0,
+  "absolute_change": 50.0,
+  "current_price": 550.0,
+  "classification_reason": "Genuine price increase detected: INR 500.0 -> INR 550.0 (+10.0%).",
+  "workflow": "Approval, Sheet Update & Verification Passed"
+}

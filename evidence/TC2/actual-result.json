@@ -1,0 +1,8 @@
+{
+  "alert_id": 18,
+  "change_type": "currency_change",
+  "percentage_change": null,
+  "absolute_change": null,
+  "current_price": 999.0,
+  "classification_reason": "Currency display changed from USD to INR. Cross-currency numerical price comparison suppressed to prevent false alert."
+}

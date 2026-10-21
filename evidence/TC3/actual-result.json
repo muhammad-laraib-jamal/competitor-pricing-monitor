@@ -1,0 +1,8 @@
+{
+  "alert_id": 19,
+  "change_type": "unavailable",
+  "percentage_change": null,
+  "absolute_change": null,
+  "current_price": null,
+  "classification_reason": "Pricing changed from \u20b91999/month to 'Contact sales'. Plan is now Contact Sales / unlisted (unavailable, not zero)."
+}

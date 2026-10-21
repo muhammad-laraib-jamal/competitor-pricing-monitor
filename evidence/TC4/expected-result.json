@@ -1,0 +1,4 @@
+{
+  "expected_change_type": "price_change",
+  "notes": "Competitor D increased price from \u20b9500 to \u20b9550 (+10.00%). Tested full workflow: alert generated -> human approval executed -> internal sheet updated -> read-back verification passed -> idempotent re-execution verified."
+}
