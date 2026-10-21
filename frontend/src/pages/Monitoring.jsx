@@ -18,6 +18,7 @@ import StatusBadge from '../components/StatusBadge';
 import { formatDate, formatRelativeTime } from '../utils/format';
 
 export default function Monitoring() {
+  const [collectorMode, setCollectorMode] = useState('mock');
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -46,7 +47,7 @@ export default function Monitoring() {
     setRunning(true);
     setLastResult(null);
     try {
-      const res = await api.runMonitoring({ collector_type: 'mock' });
+      const res = await api.runMonitoring({ collector_type: collectorMode });
       setLastResult({
         success: true,
         data: res.data,
@@ -98,7 +99,32 @@ export default function Monitoring() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600 border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setCollectorMode('mock')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                collectorMode === 'mock'
+                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              Mock (TC1-TC4)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollectorMode('http')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                collectorMode === 'http'
+                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              Live Web (HTTP/BS4)
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={fetchRuns}
@@ -119,7 +145,13 @@ export default function Monitoring() {
             ) : (
               <Play className="w-4 h-4 fill-current" />
             )}
-            <span>{running ? 'Running Scrape & Compare...' : 'Run Monitoring Now'}</span>
+            <span>
+              {running
+                ? 'Running Scrape & Compare...'
+                : collectorMode === 'http'
+                ? 'Run Live Web Scrape'
+                : 'Run Monitoring Now'}
+            </span>
           </button>
         </div>
       </div>

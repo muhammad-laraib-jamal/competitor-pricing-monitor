@@ -947,6 +947,163 @@ def run_mock_monitoring(db: Session, collector_type: str = "mock") -> models.Mon
     return run
 
 
+def run_live_monitoring(
+    db: Session,
+    competitor_ids: Optional[List[int]] = None,
+) -> models.MonitoringRun:
+    """Execute live monitoring against public competitor pricing pages."""
+    from .collectors import get_collector
+
+    q = db.query(models.Competitor).filter(models.Competitor.enabled == True)
+    if competitor_ids:
+        q = q.filter(models.Competitor.id.in_(competitor_ids))
+    competitors = q.all()
+
+    run = models.MonitoringRun(
+        started_at=datetime.utcnow(),
+        status="running",
+        total_competitors=len(competitors),
+        collector_type="http",
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+
+    collector = get_collector("http")
+    successful = 0
+    failed = 0
+    changes_detected = 0
+
+    for comp in competitors:
+        try:
+            result = collector.fetch(comp.price_page_url, timeout=10)
+            if not result.success:
+                failed += 1
+                obs = models.PriceObservation(
+                    competitor_id=comp.id,
+                    plan_mapping_id=None,
+                    monitoring_run_id=run.id,
+                    raw_plan_name="Unresolved",
+                    raw_price_text=None,
+                    price_amount=None,
+                    currency=None,
+                    billing_period=None,
+                    fetched_at=datetime.utcnow(),
+                    status="fetch_failed",
+                    extraction_method="http",
+                    source_url=comp.price_page_url,
+                    raw_html_excerpt=result.html_excerpt,
+                    normalization_notes=result.error_message,
+                )
+                db.add(obs)
+                db.commit()
+                continue
+
+            successful += 1
+            if not result.plans:
+                obs = models.PriceObservation(
+                    competitor_id=comp.id,
+                    plan_mapping_id=None,
+                    monitoring_run_id=run.id,
+                    raw_plan_name="Page Loaded - No Plans Detected",
+                    raw_price_text=None,
+                    price_amount=None,
+                    currency=None,
+                    billing_period=None,
+                    fetched_at=datetime.utcnow(),
+                    status="extraction_failed",
+                    extraction_method="http",
+                    source_url=comp.price_page_url,
+                    raw_html_excerpt=result.html_excerpt,
+                    normalization_notes="Page returned HTTP 200 but pricing tables could not be parsed automatically.",
+                )
+                db.add(obs)
+                db.commit()
+                continue
+
+            for plan_data in result.plans:
+                raw_name = plan_data["raw_plan_name"]
+                raw_price = plan_data["raw_price_text"]
+
+                mapping = (
+                    db.query(models.PlanMapping)
+                    .filter(
+                        models.PlanMapping.competitor_id == comp.id,
+                        models.PlanMapping.raw_plan_name == raw_name,
+                    )
+                    .first()
+                )
+                if not mapping:
+                    amount, cur = _parse_price(raw_price)
+                    mapping = models.PlanMapping(
+                        competitor_id=comp.id,
+                        raw_plan_name=raw_name,
+                        canonical_name=raw_name,
+                        billing_period=_parse_billing(raw_price) or "monthly",
+                        currency=cur or "USD",
+                    )
+                    db.add(mapping)
+                    db.commit()
+                    db.refresh(mapping)
+
+                prev_obs = (
+                    db.query(models.PriceObservation)
+                    .filter(
+                        models.PriceObservation.competitor_id == comp.id,
+                        models.PriceObservation.plan_mapping_id == mapping.id,
+                        models.PriceObservation.status.in_(["fetched", "unavailable"]),
+                    )
+                    .order_by(models.PriceObservation.fetched_at.desc())
+                    .first()
+                )
+
+                curr_obs = store_observation(
+                    db=db,
+                    competitor=comp,
+                    plan_mapping=mapping,
+                    raw_price_text=raw_price,
+                    source_url=comp.price_page_url,
+                    monitoring_run_id=run.id,
+                    extraction_method="http",
+                    raw_html_excerpt=result.html_excerpt,
+                )
+
+                if prev_obs:
+                    alert = compare_observations(
+                        db=db,
+                        prev_obs=prev_obs,
+                        curr_obs=curr_obs,
+                        competitor=comp,
+                        plan_mapping=mapping,
+                        monitoring_run_id=run.id,
+                    )
+                    if alert and alert.change_type in ("price_change", "currency_change", "unavailable"):
+                        changes_detected += 1
+
+        except Exception:
+            failed += 1
+
+    run.status = "completed"
+    run.completed_at = datetime.utcnow()
+    run.successful = successful
+    run.failed = failed
+    run.changes_detected = changes_detected
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def run_monitoring_cycle(
+    db: Session,
+    collector_type: str = "mock",
+    competitor_ids: Optional[List[int]] = None,
+) -> models.MonitoringRun:
+    """Dispatch to live HTTP monitoring or deterministic mock fixtures."""
+    if collector_type in ("http", "live"):
+        return run_live_monitoring(db, competitor_ids=competitor_ids)
+    return run_mock_monitoring(db, collector_type="mock")
+
+
 def run_official_test_cases(db: Session) -> List[models.TestRun]:
     """Execute all 4 official test cases (TC1-TC4) and record verified TestRun results."""
     # Ensure monitoring run has executed fixtures

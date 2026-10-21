@@ -302,8 +302,9 @@ def trigger_monitoring_run(
     db: Session = Depends(get_db),
 ):
     """Trigger a monitoring run. Executes fixtures for official test cases."""
-    collector = request.collector_type if request else "mock"
-    run = services.run_mock_monitoring(db, collector_type=collector)
+    collector = request.collector_type if request and request.collector_type else "mock"
+    comp_ids = request.competitor_ids if request else None
+    run = services.run_monitoring_cycle(db, collector_type=collector, competitor_ids=comp_ids)
     return run
 
 

@@ -501,3 +501,21 @@ def test_api_dashboard_stats(db_session):
     assert stats.total_competitors >= 0
     assert stats.total_monitored_plans >= 0
     assert stats.pending_approvals >= 0
+
+
+def test_collectors_mock_and_http():
+    from backend.app.collectors import get_collector, MockPricingCollector, HttpPricingCollector
+
+    mock_c = get_collector("mock")
+    assert isinstance(mock_c, MockPricingCollector)
+    res = mock_c.fetch("https://example.com/competitor-a/pricing")
+    assert res.success is True
+    assert len(res.plans) >= 1
+    assert res.plans[0]["raw_plan_name"] == "Basic"
+
+    # Test HTTP collector resilience on invalid domain
+    http_c = get_collector("http")
+    assert isinstance(http_c, HttpPricingCollector)
+    fail_res = http_c.fetch("https://unreachable-mock-subdomain-999.test", timeout=2)
+    assert fail_res.success is False
+    assert fail_res.error_message is not None
