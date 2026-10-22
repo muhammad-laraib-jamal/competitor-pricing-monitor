@@ -20,6 +20,10 @@ import { formatDate, formatRelativeTime } from '../utils/format';
 export default function Monitoring() {
   const [collectorMode, setCollectorMode] = useState('mock');
   const [runs, setRuns] = useState([]);
+  // Temporarily hide HTTP runs for the hackathon demo.
+const visibleRuns = runs.filter(
+  (run) => (run.collector_type || 'mock') !== 'http'
+);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [lastResult, setLastResult] = useState(null);
@@ -47,7 +51,8 @@ export default function Monitoring() {
     setRunning(true);
     setLastResult(null);
     try {
-      const res = await api.runMonitoring({ collector_type: collectorMode });
+      // const res = await api.runMonitoring({ collector_type: collectorMode });
+      const res = await api.runMonitoring({ collector_type: 'mock' });
       setLastResult({
         success: true,
         data: res.data,
@@ -112,16 +117,13 @@ export default function Monitoring() {
             >
               Mock (TC1-TC4)
             </button>
+            {/* Original HTTP handler: onClick={() => setCollectorMode('http')} */}
             <button
-              type="button"
-              onClick={() => setCollectorMode('http')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                collectorMode === 'http'
-                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                  : 'hover:text-slate-900'
-              }`}
+            type="button"
+            disabled
+              className="px-3 py-1.5 rounded-lg text-slate-400 cursor-not-allowed opacity-60"
             >
-              Live Web (HTTP/BS4)
+              Live Web (Temporarily Disabled)
             </button>
           </div>
 
@@ -193,7 +195,7 @@ export default function Monitoring() {
             <h3 className="font-semibold text-slate-800 text-sm">Execution History</h3>
           </div>
           <span className="text-xs text-slate-400 font-mono">
-            {runs.length} runs recorded
+            {visibleRuns.length} runs recorded
           </span>
         </div>
 
@@ -203,7 +205,7 @@ export default function Monitoring() {
               <div key={i} className="h-14 bg-slate-100 rounded-lg animate-pulse"></div>
             ))}
           </div>
-        ) : runs.length === 0 ? (
+        ) : visibleRuns.length === 0 ? (
           <div className="text-center py-16 px-4">
             <Radio className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h4 className="text-sm font-semibold text-slate-800">No monitoring runs recorded yet</h4>
@@ -213,7 +215,8 @@ export default function Monitoring() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {runs.map((run) => {
+            {/* Original mapping preserved: runs.map(...) */}
+{visibleRuns.map((run) => {
               const isExpanded = expandedRunId === run.id;
               const detail = runDetails[run.id];
 

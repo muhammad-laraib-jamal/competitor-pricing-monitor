@@ -79,7 +79,28 @@ export default function Dashboard() {
     }
   };
 
-  const lastCheckTime = stats?.last_run?.completed_at || stats?.last_run?.started_at;
+  // Original: const lastCheckTime = stats?.last_run?.completed_at || stats?.last_run?.started_at;
+
+// Temporarily use mock runs for the hackathon demo.
+const [mockRuns, setMockRuns] = useState([]);
+
+useEffect(() => {
+  api.getMonitoringRuns()
+    .then((res) => {
+      const runs = (res.data || []).filter(
+        (run) => (run.collector_type || 'mock') === 'mock'
+      );
+      setMockRuns(runs);
+    })
+    .catch((err) => console.error('Failed to load mock runs:', err));
+}, []);
+
+// Original: const latestMockRun = mockRuns[0];
+const latestMockRun = [...mockRuns].sort(
+  (a, b) => new Date(b.started_at) - new Date(a.started_at)
+)[0];
+const lastCheckTime =
+  latestMockRun?.completed_at || latestMockRun?.started_at;
 
   return (
     <div className="space-y-6">
@@ -204,13 +225,14 @@ export default function Dashboard() {
           color={stats?.pending_approvals > 0 ? 'rose' : 'emerald'}
           loading={loading}
         />
-
+{/* Original Failed Checks value: stats?.last_run ? stats.last_run.failed : 0 */}
         <StatCard
           title="Failed Checks"
-          value={stats?.last_run ? stats.last_run.failed : 0}
+          
+value={latestMockRun ? latestMockRun.failed : 0}
           subtitle="Scrape / access errors"
           icon={AlertOctagon}
-          color={stats?.last_run?.failed > 0 ? 'rose' : 'emerald'}
+          color={latestMockRun?.failed > 0 ? 'rose' : 'emerald'}
           loading={loading}
         />
       </div>
